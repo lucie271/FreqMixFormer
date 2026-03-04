@@ -1,0 +1,44 @@
+model: model.skefreqmixformer.Model
+model_args:
+  num_class: 9              # or 8 if you drop a class + remap labels
+  num_point: 17
+  num_person: 2
+  graph: graph.coco17.Graph
+  graph_args:
+    labeling_mode: 'spatial'
+
+feeder: feeders.feeder_coco_17_2d.Feeder
+train_feeder_args:
+  data_path: /orcd/scratch/bcs/001/sensein/sails/gesture_data/2d_keypoints/prepared_fmf/hrnet/training.npz # -- EDIT THIS
+  split: train
+  window_size: 64
+  num_person: 2
+  bone: False
+  vel: False
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  normalization: False
+  random_rot: False
+  p_interval: [0.5, 1]
+  
+test_feeder_args:
+  data_path: /orcd/scratch/bcs/001/sensein/sails/gesture_data/2d_keypoints/prepared_fmf/hrnet/training.npz # -- EDIT THIS
+  split: test
+  window_size: 64
+  num_person: 2
+  bone: False
+  vel: False
+  p_interval: [0.95]
+  debug: False
+
+
+##### dct########
+# optim
+weight_decay: 0.0005
+base_lr: 0.1
+step: [35, 55, 75]
+warm_up_epoch: 5
+num_worker: 0
+batch_size: 16

@@ -1,0 +1,20 @@
+# Core
+numpy
+PyYAML
+tqdm
+torchpack
+# Training / logging
+tensorboardX
+
+# Metrics
+scikit-learn
+
+# Model utilities
+einops
+torch-dct
+h5py
+# Plotting (used in code)
+matplotlib
+
+# For ensemble weight search (ensemble.py)
+scikit-optimize

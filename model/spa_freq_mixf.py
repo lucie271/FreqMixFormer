@@ -25,14 +25,15 @@ def bn_init(bn, scale):
     nn.init.constant(bn.bias, 0)
         
 class Spa_Atten(nn.Module):
-    def __init__(self, out_channels):
+    def __init__(self, out_channels,V):
         super(Spa_Atten, self).__init__()
         self.out_channels=out_channels
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.relu = nn.ReLU()
         self.soft = nn.Softmax(-1) 
         self.bn = nn.BatchNorm2d(out_channels)
-        self.linear = nn.Linear(25,25)
+        self.V = V
+        self.linear = nn.Linear(V,V)
 
     def forward(self, x): 
         N, C, T, V = x.size()  
@@ -52,12 +53,14 @@ class Spatial_Freq_MixFormer(nn.Module):
         self.out_channels=out_channels
         self.in_channels=in_channels
         self.num_subset = num_subset
+        self.V = A.shape[-1]
         self.alpha = nn.Parameter(torch.ones(1))
-        self.A_GEME = nn.Parameter(torch.tensor(np.reshape(A.astype(np.float32),[3,1,25,25]), dtype=torch.float32, requires_grad=True).repeat(1,groups,1,1), requires_grad=True)
-        self.A_SE = Variable(torch.from_numpy(np.reshape(A.astype(np.float32),[3,1,25,25]).repeat(groups,axis=1)), requires_grad=False) 
+        self.A_GEME = nn.Parameter(torch.tensor(np.reshape(A.astype(np.float32),[3,1,self.V,self.V]), dtype=torch.float32, requires_grad=True).repeat(1,groups,1,1), requires_grad=True)
+        self.A_SE = Variable(torch.from_numpy(np.reshape(A.astype(np.float32),[3,1,self.V,self.V]).repeat(groups,axis=1)), requires_grad=False) 
         self.sigmoid = nn.Sigmoid()
-        self.linear = nn.Linear(25,25)
-        self.Spa_Att = Spa_Atten(out_channels//4)
+
+        self.linear = nn.Linear(self.V,self.V)
+        self.Spa_Att = Spa_Atten(out_channels//4,self.V)
         self.AvpChaRef = nn.AdaptiveAvgPool2d(1) 
         self.ChaRef_conv = nn.Conv1d(1, 1, kernel_size=3, padding=(3 - 1) // 2, bias=False) 
         self.conv = nn.Conv2d(
@@ -78,8 +81,8 @@ class Spatial_Freq_MixFormer(nn.Module):
                 self.down = lambda x: x
         else:
             self.down = lambda x: 0
-        self.fc = nn.Linear(50, 25)
-        nn.init.normal(self.fc.weight, 0, math.sqrt(2. / 25))
+        self.fc = nn.Linear(2*self.V, self.V)
+        nn.init.normal(self.fc.weight, 0, math.sqrt(2. / self.V))
         self.bn = nn.BatchNorm2d(out_channels)
         self.soft = nn.Softmax(-1)
         self.relu = nn.ReLU()         
@@ -94,7 +97,7 @@ class Spatial_Freq_MixFormer(nn.Module):
         N, C, T, V = x0.size() 
         A = self.A_SE.cuda(x0.get_device()) + self.A_GEME 
         norm_learn_A = A.repeat(1,self.out_channels//self.groups,1,1)   
-        A_final=torch.zeros([N,self.num_subset,self.out_channels,25,25],dtype=torch.float,device='cuda').detach()     
+        A_final=torch.zeros([N,self.num_subset,self.out_channels,self.V,self.V],dtype=torch.float,device='cuda').detach()     
         m = x0         
         m = self.conv(m)
         n, kc, t, v = m.size()
@@ -126,7 +129,7 @@ class Spatial_Freq_MixFormer(nn.Module):
             
             l = 0.5    
             h = 1.5  
-            d = 13                   # [1, 25]
+            d = self.V // 2                    # [1, 25]
             m1_2d[:, :, :, :d] *= l  # Reduce low frequency
             m1_2d[:, :, :, d:] *= h  # Increase high frequency                
             m2_3d[:, :, :, :d] *= l  

@@ -106,7 +106,7 @@ def get_parser():
     parser.add_argument(
         '--show-topk',
         type=int,
-        default=[1, 5],
+        default=[1, 2, 5],
         nargs='+',
         help='which Top K accuracy will be shown')
 
@@ -116,7 +116,7 @@ def get_parser():
     parser.add_argument(
         '--num-worker',
         type=int,
-        default=32,
+        default=4,
         help='the number of worker for data loader')
     parser.add_argument(
         '--train-feeder-args',
@@ -200,15 +200,15 @@ class Processor():
         if arg.phase == 'train':
             if not arg.train_feeder_args['debug']:
                 arg.model_saved_name = os.path.join(arg.work_dir, 'runs')
-                if os.path.isdir(arg.model_saved_name):
-                    print('log_dir: ', arg.model_saved_name, 'already exist')
-                    answer = input('delete it? y/n:')
-                    if answer == 'y':
-                        shutil.rmtree(arg.model_saved_name)
-                        print('Dir removed: ', arg.model_saved_name)
-                        input('Refresh the website of tensorboard by pressing any keys')
-                    else:
-                        print('Dir not removed: ', arg.model_saved_name)
+                # if os.path.isdir(arg.model_saved_name):
+                #     print('log_dir: ', arg.model_saved_name, 'already exist')
+                #     answer = input('delete it? y/n:')
+                #     if answer == 'y':
+                #         shutil.rmtree(arg.model_saved_name)
+                #         print('Dir removed: ', arg.model_saved_name)
+                #         input('Refresh the website of tensorboard by pressing any keys')
+                #     else:
+                #         print('Dir not removed: ', arg.model_saved_name)
                 self.train_writer = SummaryWriter(os.path.join(arg.model_saved_name, 'train'), 'train')
                 self.val_writer = SummaryWriter(os.path.join(arg.model_saved_name, 'val'), 'val')
             else:
@@ -246,6 +246,7 @@ class Processor():
                 num_workers=self.arg.num_worker,
                 drop_last=True,
                 worker_init_fn=init_seed)
+        print('test_feeder_args: ', self.arg.test_feeder_args)
         self.data_loader['test'] = torch.utils.data.DataLoader(
             dataset=Feeder(**self.arg.test_feeder_args),
             batch_size=self.arg.test_batch_size,
@@ -361,6 +362,7 @@ class Processor():
         self.model.train()
         self.print_log('Training epoch: {}'.format(epoch + 1))
         loader = self.data_loader['train']
+        print(f" We have loaded {len(loader.dataset)} training samples.")
         self.adjust_learning_rate(epoch)
 
         loss_value = []
@@ -368,6 +370,9 @@ class Processor():
         self.train_writer.add_scalar('epoch', epoch, self.global_step)
         self.record_time()
         timer = dict(dataloader=0.001, model=0.001, statistics=0.001)
+        it = iter(loader)
+        print(f"Number of workers :{self.arg.num_worker}")
+
         process = tqdm(loader, ncols=40)
 
         for batch_idx, (data, label, index) in enumerate(process):
@@ -483,7 +488,8 @@ class Processor():
             confusion = confusion_matrix(label_list, pred_list)
             list_diag = np.diag(confusion)
             list_raw_sum = np.sum(confusion, axis=1)
-            each_acc = list_diag / list_raw_sum
+
+            each_acc = np.divide(list_diag, list_raw_sum, out=np.zeros_like(list_diag, dtype=float), where=list_raw_sum!=0)
             with open('{}/epoch{}_{}_each_class_acc.csv'.format(self.arg.work_dir, epoch + 1, ln), 'w') as f:
                 writer = csv.writer(f)
                 writer.writerow(each_acc)
@@ -505,6 +511,7 @@ class Processor():
                 self.eval(epoch, save_score=self.arg.save_score, loader_name=['test'])
 
             # test the best model
+            print(f"The best epoch was : {self.best_acc_epoch} with accuracy: {self.best_acc}")
             weights_path = glob.glob(os.path.join(self.arg.work_dir, 'runs-'+str(self.best_acc_epoch)+'*'))[0]
             weights = torch.load(weights_path)
             if type(self.arg.device) is list:
