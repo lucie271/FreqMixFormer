@@ -1,7 +1,7 @@
 # feeder
 feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
-  data_path: /orcd/data/satra/001/users/lucie271/gesture_data/NTU9_CUSTOM_balanced_heavy.npz
+  data_path: /orcd/scratch/bcs/001/sensein/sails/gesture_data/3d_keypoints/prepared_fmf/mediapipe/full/NTU9_CUSTOM_balanced_full_9classes.npz
   split: train
   debug: False
   random_choose: False
@@ -15,7 +15,7 @@ train_feeder_args:
   bone: False
 
 test_feeder_args:
-  data_path: /orcd/data/satra/001/users/lucie271/gesture_data/NTU9_CUSTOM_balanced_heavy.npz
+  data_path: /orcd/scratch/bcs/001/sensein/sails/gesture_data/3d_keypoints/prepared_fmf/mediapipe/full/NTU9_CUSTOM_balanced_full_9classes.npz
   split: test
   window_size: 64
   p_interval: [0.95]
@@ -26,7 +26,7 @@ test_feeder_args:
 # model
 model: model.skefreqmixformer.Model
 model_args:
-  num_class: 60
+  num_class: 9
   num_point: 25
   num_person: 2
   graph: graph.ntu_rgb_d.Graph

@@ -25,6 +25,22 @@ Consequently, we introduce the Frequency-aware Mixed Transformer (FreqMixFormer)
 * Create the GitHub repository and project website on 2024/7/18
 * Preprint paper is available on arXiv 2024/7/18
 
+## For SAILS project
+
+### Data access
+You need to have acces to the scratch folder on ORCD : `/orcd/scratch/bcs/001/sensein/sails/gesture_data/`
+Else you'll need to modify the data paths in the configuration files.
+You can train the model on 3D skeleton data in NTU-like format - 25 keypoints (extracted from mediapipe), 2D-skeleton data (+ confidence) in coco-17 like format - 17 keypoints.
+Depending on the skeleton data you want to train the model with, please adapt the  `train.sh` file pointing to the according configuration file. During training the configuration files should point in test and train to the same file. If you want to evaluate the model after training on untouched data, then you'll need to change the test file path to the validation only file (ususally in the same folder, with an extension "sails_only_val").
+
+### Training
+
+```sbatch runs.sh```
+
+### Evaluation 
+
+Modify the configuration file to point to the right test filepath, then modify the `evaluate.sh` file to add the path to the best epoch of the model from training. Then run : 
+```sbatch evaluate.sh```
 ## Download datasets
 **NTU RGB+D 60 and 120**
 

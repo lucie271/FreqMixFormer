@@ -64,7 +64,7 @@ class Model(nn.Module):
             Graph = import_class(graph)
             self.graph = Graph()
         A = self.graph.A 
-        self.A_vector = self.get_A(graph, 8)   
+        self.register_buffer("A_vector", self.get_A(graph, 4).float())
         # self.A_vector = self.get_A(graph, 1)
         # self.A_vector = self.get_A(graph, 2)
         # k = 6 in ucla, k = 8 in ntu
@@ -72,7 +72,7 @@ class Model(nn.Module):
         self.data_bn = nn.BatchNorm1d(num_person * 80 * num_point)        
         self.to_joint_embedding = nn.Linear(in_channels, 80)
         self.pos_embedding = nn.Parameter(torch.randn(1, self.num_point, 80))
-        
+        print(f"There are {self.num_point} joints in the skeleton, and the dimension of joint embedding is 80.")
         self.l1 = Ske_MixF(80, 80, A, 64, residual=False)
         self.l2 = Ske_MixF(80, 80, A, 64)
         self.l3 = Ske_MixF(80, 80, A, 64)
@@ -129,9 +129,8 @@ class Model(nn.Module):
     def forward(self, x):
         N, C, T, V, M = x.size()
         x = rearrange(x, 'n c t v m -> (n m t) v c', m=M, v=V).contiguous()
-        p = self.A_vector
-        p = torch.tensor(p,dtype=torch.float)
-        x = p.to(x.device).expand(N*M*T, -1, -1) @ x
+        p = self.A_vector.to(x.device)
+        x = p.expand(N*M*T, -1, -1) @ x
         x = self.to_joint_embedding(x)
         x += self.pos_embedding[:, :self.num_point]
         
